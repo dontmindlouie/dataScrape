@@ -10,6 +10,8 @@ namespace gameRankingScrapeTest
     {
         static void Main(string[] args)
         {
+            Console.WriteLine("commit test");
+            Console.ReadLine();
         }
     }
 }
