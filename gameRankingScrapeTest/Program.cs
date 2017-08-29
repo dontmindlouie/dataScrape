@@ -21,37 +21,33 @@ namespace gameRankingScrapeTest
             HtmlNodeCollection gameRankingNode = htmlDoc.DocumentNode.SelectNodes("//*[@id=\"main_col\"]//div//div//table//tr//td/span//b");
             var gameName = gameNameNode.Select(node => node.InnerText);
             var gameRanking = gameRankingNode.Select(node => node.InnerText);
-            var gameName2 = "super mario";
             Console.WriteLine("List of game names:");
-
-            var columns = gameName.Join(gameRanking, name => name, ranking => ranking, (name, ranking) => new { Name = name, Ranking = ranking});
-            var columns2 = gameName.Concat(gameRanking);
-            var columns3 = gameName.Zip(gameRanking, (n, r) => new { Name = n, Ranking = r });
-            foreach (var entry in columns3)
+            var gameColumns = gameName.Zip(gameRanking, (n, r) => new { Name = n, Ranking = r });
+            foreach (var entry in gameColumns)
             {
                 Console.WriteLine(entry.Name + " " + entry.Ranking);
             }
-            
 
+            Console.WriteLine("\nPress enter to save the data to the database");
             Console.ReadLine();
             string connstring = "Data Source=DESKTOP-5LVATAU\\SQLEXPRESS;Initial Catalog=TestDB;Integrated Security=True";
-            string insertQuery = "INSERT INTO dbo.GameRankings (gameName) VALUES (@gameName)";
+            string insertQuery = "INSERT INTO dbo.GameRankings (gameName,gameRanking) VALUES (@gameName,@gameRanking)";
             using (SqlConnection conn = new SqlConnection(connstring))
             using (SqlCommand command = new SqlCommand(insertQuery, conn))
             {
                 command.Parameters.Add("@gameName", SqlDbType.NVarChar);
+                command.Parameters.Add("@gameRanking", SqlDbType.NVarChar);
                 conn.Open();
-                foreach(var name in gameName)
+                foreach(var entry in gameColumns)
                 {
-                    command.Parameters["@gameName"].Value = name;
+                    command.Parameters["@gameName"].Value = entry.Name;
+                    command.Parameters["@gameRanking"].Value = entry.Ranking;
                     command.ExecuteNonQuery();
                 }
                 conn.Close();
             }
             Console.WriteLine("\nGame rankings have been saved in the SQL database.");
             Console.ReadLine();
-            //change 1 test
-
         }
     }
 }
