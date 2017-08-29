@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Data;
 using System.Data.SqlClient;
 using HtmlAgilityPack;
 
@@ -16,38 +17,37 @@ namespace gameRankingScrapeTest
             Console.ReadLine();
             HtmlWeb hw = new HtmlWeb();
             HtmlDocument htmlDoc = hw.Load("https://www.gamerankings.com/browse.html");
-            HtmlNodeCollection tables = htmlDoc.DocumentNode.SelectNodes("//*[@id=\"main_col\"]//div//div//table//tr//td//a");
-            var gameName = tables.Select(node => node.InnerText);
-            var gameName2 = "super mario";
-            var gameName4 = "zelda";
-            IEnumerable<string> gameName3 = gameName;
-            string sqlquery = "INSERT into dbo.GameRankings (gameName) VALUES ('";
-            sqlquery = sqlquery + string.Join("'), ('", gameName);
-            //sqlquery = string.Concat(sqlquery, "')");
-            sqlquery += "')'";
-            Console.WriteLine(sqlquery);
-
-            Console.WriteLine("\nPress a key to output the game rankings to SQL database.");
-            Console.ReadLine();
-            using (SqlConnection conn = new SqlConnection("Data Source=DESKTOP-5LVATAU\\SQLEXPRESS;Initial Catalog=TestDB;Integrated Security=True"))
+            HtmlNodeCollection gameNameNode = htmlDoc.DocumentNode.SelectNodes("//*[@id=\"main_col\"]//div//div//table//tr//td//a");
+            HtmlNodeCollection gameRankingNode = htmlDoc.DocumentNode.SelectNodes("//*[@id=\"main_col\"]//div//div//table//tr//td/span//b");
+            var gameName = gameNameNode.Select(node => node.InnerText);
+            var gameRanking = gameRankingNode.Select(node => node.InnerText);
+            Console.WriteLine("List of game names:");
+            var gameColumns = gameName.Zip(gameRanking, (n, r) => new { Name = n, Ranking = r });
+            foreach (var entry in gameColumns)
             {
-                using (SqlCommand command = conn.CreateCommand())
+                Console.WriteLine(entry.Name + " " + entry.Ranking);
+            }
+
+            Console.WriteLine("\nPress enter to save the data to the database");
+            Console.ReadLine();
+            string connstring = "Data Source=DESKTOP-5LVATAU\\SQLEXPRESS;Initial Catalog=TestDB;Integrated Security=True";
+            string insertQuery = "INSERT INTO dbo.GameRankings (gameName,gameRanking) VALUES (@gameName,@gameRanking)";
+            using (SqlConnection conn = new SqlConnection(connstring))
+            using (SqlCommand command = new SqlCommand(insertQuery, conn))
+            {
+                command.Parameters.Add("@gameName", SqlDbType.NVarChar);
+                command.Parameters.Add("@gameRanking", SqlDbType.NVarChar);
+                conn.Open();
+                foreach(var entry in gameColumns)
                 {
-
-
-                    //command.CommandText = "INSERT into dbo.GameRankings (gameName) VALUES (@gameName)";
-                    //command.Parameters.AddWithValue("@gameName", gameName2);
-                    //command.Parameters.AddWithValue("@gameName", gameName4);
-                    command.CommandText = sqlquery;
-                    conn.Open();
+                    command.Parameters["@gameName"].Value = entry.Name;
+                    command.Parameters["@gameRanking"].Value = entry.Ranking;
                     command.ExecuteNonQuery();
-                    conn.Close();
                 }
+                conn.Close();
             }
             Console.WriteLine("\nGame rankings have been saved in the SQL database.");
             Console.ReadLine();
-            //change 1 test
-
         }
     }
 }
